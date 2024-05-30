@@ -18,24 +18,24 @@ const bool ANI = false;
 const int HEIGHT = 100;
 const int WIDTH  = 100;
 
-class Turtle_1_Planning : public rclcpp::Node
+class Turtle_2_Planning : public rclcpp::Node
 {
   public:
-    Turtle_1_Planning()
+    Turtle_2_Planning()
     : Node("planning_1"), ob_map(HEIGHT, std::vector<int>(WIDTH, 0)),  total_map(HEIGHT, std::vector<int>(WIDTH, 0))
     {
-      local_sub1 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_1/real_local", 1, std::bind(&Turtle_1_Planning::real_local_cb1, this, _1));
-      local_sub2 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_2/real_local", 1, std::bind(&Turtle_1_Planning::real_local_cb2, this, _1));
-      local_sub3 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_3/real_local", 1, std::bind(&Turtle_1_Planning::real_local_cb3, this, _1));
-      local_sub4 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_4/real_local", 1, std::bind(&Turtle_1_Planning::real_local_cb4, this, _1));
+      local_sub1 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_1/real_local", 1, std::bind(&Turtle_2_Planning::real_local_cb1, this, _1));
+      local_sub2 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_2/real_local", 1, std::bind(&Turtle_2_Planning::real_local_cb2, this, _1));
+      local_sub3 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_3/real_local", 1, std::bind(&Turtle_2_Planning::real_local_cb3, this, _1));
+      local_sub4 = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_4/real_local", 1, std::bind(&Turtle_2_Planning::real_local_cb4, this, _1));
 
-      obstacle_sub = this->create_subscription<std_msgs::msg::Float32MultiArray>("/total_obstacles", 1, std::bind(&Turtle_1_Planning::obstacle_cb, this, _1));
-      goal_sub = this->create_subscription<std_msgs::msg::Int32MultiArray>("/turtle_1/target_goal", 1, std::bind(&Turtle_1_Planning::goal_cb, this, _1));
+      obstacle_sub = this->create_subscription<std_msgs::msg::Float32MultiArray>("/total_obstacles", 1, std::bind(&Turtle_2_Planning::obstacle_cb, this, _1));
+      goal_sub = this->create_subscription<std_msgs::msg::Int32MultiArray>("/turtle_2/target_goal", 1, std::bind(&Turtle_2_Planning::goal_cb, this, _1));
      
-      path_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/turtle_1/path", 10);
-      turtle_map_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/turtle_1/map", 10);
+      path_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/turtle_2/path", 10);
+      turtle_map_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/turtle_2/map", 10);
 
-      timer_ = this->create_wall_timer(50ms, std::bind(&Turtle_1_Planning::planning, this));
+      timer_ = this->create_wall_timer(50ms, std::bind(&Turtle_2_Planning::planning, this));
       
       for (int dx = -robotSize; dx <= robotSize; ++dx) {
           for (int dy = -robotSize; dy <= robotSize; ++dy) {
@@ -57,7 +57,7 @@ class Turtle_1_Planning : public rclcpp::Node
     }
 
     void wait_local(){
-      while(turtle_real_x1 == -1) rclcpp::spin_some(this->get_node_base_interface());
+      while(turtle_real_x2 == -1) rclcpp::spin_some(this->get_node_base_interface());
     }
 
   private:
@@ -90,11 +90,11 @@ class Turtle_1_Planning : public rclcpp::Node
           }
       }
       
-      if(turtle_2_sub) {
+      if(turtle_1_sub) {
         for (int i = -12; i <= 12; ++i) {
           for (int j = -12; j <= 12; ++j) {
-            int nx = turtle_real_x2 + round(i * cos(turtle_real_heading2) - j * sin(turtle_real_heading2));
-            int ny = turtle_real_y2 + round(i * sin(turtle_real_heading2) + j * cos(turtle_real_heading2));
+            int nx = turtle_real_x1 + round(i * cos(turtle_real_heading1) - j * sin(turtle_real_heading1));
+            int ny = turtle_real_y1 + round(i * sin(turtle_real_heading1) + j * cos(turtle_real_heading1));
             if (nx >= 0 && nx < HEIGHT && ny >= 0 && ny < WIDTH) {
                 temp_map[nx][ny] = 1;
             }
@@ -124,6 +124,7 @@ class Turtle_1_Planning : public rclcpp::Node
         }
       }
 
+
       int d_ob;
       for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
@@ -132,7 +133,7 @@ class Turtle_1_Planning : public rclcpp::Node
           if(d_ob == -1) dstar.updateCell(i, j, 1);
           else if(d_ob == 1) dstar.updateCell(i, j, -1);
         }
-      }
+      } 
 
 
       total_map = temp_map;
@@ -155,7 +156,7 @@ class Turtle_1_Planning : public rclcpp::Node
         std::list<state> path = dstar.getPath();
 
         if(path.size() == 0){
-          initial_dstar(turtle_real_x1,turtle_real_y1,path_goal_x,path_goal_y);
+          initial_dstar(turtle_real_x2,turtle_real_y2,path_goal_x,path_goal_y);
         }
         auto path_array = std_msgs::msg::Int32MultiArray();
 
@@ -329,12 +330,13 @@ class Turtle_1_Planning : public rclcpp::Node
     std::vector<std::pair<int, int>> map_directions;
     Map map;
     Dstar dstar;
+
 };
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto turtle_localization_node = std::make_shared<Turtle_1_Planning>();
+  auto turtle_localization_node = std::make_shared<Turtle_2_Planning>();
   turtle_localization_node->wait_local();
   rclcpp::spin(turtle_localization_node);
   rclcpp::shutdown();

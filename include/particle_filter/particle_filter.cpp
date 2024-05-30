@@ -68,15 +68,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         if (yaw_rate != 0) {
             new_x = p->x + (velocity / yaw_rate) * (sin(p->theta + yaw_rate * delta_t) - sin(p->theta));
             new_y = p->y + (velocity / yaw_rate) * (cos(p->theta) - cos(p->theta + yaw_rate * delta_t));
-            if(p->theta + yaw_rate * delta_t >3.14){
-                new_theta = p->theta + yaw_rate * delta_t - 6.28;
-            }
-            else if(p->theta + yaw_rate * delta_t < -3.14){
-                new_theta = p->theta + yaw_rate * delta_t + 6.28;
-            }
-            else{
-                new_theta = p->theta + yaw_rate * delta_t;
-            }
+            new_theta = p->theta + yaw_rate * delta_t;
             
         } else {
             new_x = p->x + velocity * delta_t * cos(p->theta);
@@ -255,6 +247,21 @@ std::pair<std::vector<double>,std::vector<double>> ParticleFilter::estimate(){
     mean[0] /= total_weight;
     mean[1] /= total_weight;
     mean[2] /= total_weight;
+
+    if(mean[2] > 3.141592*2){
+        while(mean[2] - 3.141592*2 > 0){
+            mean[2] -= 3.141592*2;
+        }
+    }
+    else if(mean[2] < -3.141592*2){
+        while(mean[2] < 0){
+            mean[2] += 3.141592*2;
+        }
+    }
+
+    if(mean[2] > 3.141592){
+        mean[2] -= 2*3.141592;
+    }
 
     for(int i = 0; i<num_particles; i++){
         Particle *p = &particles[i];

@@ -45,6 +45,13 @@ class MapServer : public rclcpp::Node
           percentage_map[i][j] = 0;
         }
       }
+
+      for (int dx = -check_area; dx <= check_area; ++dx) {
+        for (int dy = -check_area; dy <= check_area; ++dy) {
+          directions.push_back({dx, dy});
+        }
+      }
+
       //맵 끌고 오기
     }
 
@@ -59,11 +66,11 @@ class MapServer : public rclcpp::Node
 
       
 
-      for(int i = 0; i<map.landmark_list.size(); i++){
-        obstacle_list.data.push_back(map.landmark_list[i].x_f);
-        obstacle_list.data.push_back(map.landmark_list[i].y_f);
-        obstacle_list.data.push_back(std::numeric_limits<float>::infinity());
-      }
+      // for(int i = 0; i<map.landmark_list.size(); i++){
+      //   obstacle_list.data.push_back(map.landmark_list[i].x_f);
+      //   obstacle_list.data.push_back(map.landmark_list[i].y_f);
+      //   obstacle_list.data.push_back(std::numeric_limits<float>::infinity());
+      // }
 
       std::vector<std::vector<int>> obstacles_particle(HEIGHT, std::vector<int>(WIDTH, 0));
 
@@ -80,6 +87,55 @@ class MapServer : public rclcpp::Node
         obstacles_particle[obstacles_4[2*i]][obstacles_4[2*i+1]] = 1;
       }
 
+      
+      int nx,ny;
+      for (int i = -6; i <= 6; ++i) {
+        for (int j = -6; j <= 6; ++j) {
+          nx = turtle_real_x1 + round(i * cos(turtle_real_heading1) - j * sin(turtle_real_heading1));
+          ny = turtle_real_y1 + round(i * sin(turtle_real_heading1) + j * cos(turtle_real_heading1));
+          if (nx >= 0 && nx < HEIGHT && ny >= 0 && ny < WIDTH) {
+              obstacles_particle[nx][ny] = 0;
+          }
+          nx = turtle_real_x2 + round(i * cos(turtle_real_heading2) - j * sin(turtle_real_heading2));
+          ny = turtle_real_y2 + round(i * sin(turtle_real_heading2) + j * cos(turtle_real_heading2));
+          if (nx >= 0 && nx < HEIGHT && ny >= 0 && ny < WIDTH) {
+              obstacles_particle[nx][ny] = 0;
+          }
+          nx = turtle_real_x3 + round(i * cos(turtle_real_heading3) - j * sin(turtle_real_heading3));
+          ny = turtle_real_y3 + round(i * sin(turtle_real_heading3) + j * cos(turtle_real_heading3));
+          if (nx >= 0 && nx < HEIGHT && ny >= 0 && ny < WIDTH) {
+              obstacles_particle[nx][ny] = 0;
+          }
+          nx = turtle_real_x4 + round(i * cos(turtle_real_heading4) - j * sin(turtle_real_heading4));
+          ny = turtle_real_y4 + round(i * sin(turtle_real_heading4) + j * cos(turtle_real_heading4));
+          if (nx >= 0 && nx < HEIGHT && ny >= 0 && ny < WIDTH) {
+              obstacles_particle[nx][ny] = 0;
+          }
+        }
+      }
+      for(int q = 0; q<3; q++){
+        for(int i = 0; i<HEIGHT; i++){
+          for(int j = 0; j<WIDTH; j++){
+            if(obstacles_particle[i][j] == 1){
+              bool check_index = false;
+              for (const auto& dir : directions) {
+                int newX = i + dir.first;
+                int newY = j + dir.second;
+                if(newX >= 0 && newX < HEIGHT && newY >= 0 && newY < WIDTH) {
+                  if(obstacles_particle[newX][newY] == 1){
+                    check_index = true;
+                    break;
+                  }
+                }
+              }
+              if(!check_index){
+                obstacles_particle[i][j] = 0;
+              }
+            }     
+          }
+        }
+      }
+
       for(int i = 0; i<HEIGHT; i++){
         for(int j = 0; j<WIDTH; j++){
           if(obstacles_particle[i][j] == 1){
@@ -90,9 +146,9 @@ class MapServer : public rclcpp::Node
             percentage_map[i][j] -= 0.2;
           }
           if(percentage_map[i][j] < 0) percentage_map[i][j] = 0;
-          else if(percentage_map[i][j] > 100.0) percentage_map[i][j] = 100.0;
+          else if(percentage_map[i][j] > 10) percentage_map[i][j] = 10;
 
-          if(percentage_map[i][j] >= 1) {
+          if(percentage_map[i][j] >= 5) {
             obstacle_list.data.push_back(i);
             obstacle_list.data.push_back(j);
             obstacle_list.data.push_back(percentage_map[i][j]);
@@ -214,9 +270,13 @@ class MapServer : public rclcpp::Node
     std::vector<int> obstacles_3;
     std::vector<int> obstacles_4;
 
+    int check_area = 1;
     Map map;
     int HEIGHT = 100;
     std::vector<std::vector<float>> percentage_map;
+
+    std::vector<std::pair<int, int>> directions;
+
 };
 
 int main(int argc, char * argv[])

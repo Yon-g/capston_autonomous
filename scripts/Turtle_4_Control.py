@@ -24,12 +24,12 @@ class Control(Node):
         # self.bot1_odom_sub = self.create_subscription(Odom, '/bot1/ab_odom', self.bot1_odom_callback, 10)
         # self.bot1_control_pub = self.create_publisher(Twist, '/bot1/cmd_vel', 10)
 
-        self.local_sub = self.create_subscription(Odometry, '/turtle_1/real_local', self.real_local_cb, 10)
-        self.path_sub = self.create_subscription(Int32MultiArray, '/turtle_1/path', self.path_cb, 10)
-        self.goal_sub = self.create_subscription(Int32MultiArray, '/turtle_1/target_goal', self.target_goal_cb, 10)
-        self.center_control_sub = self.create_subscription(Int32, '/turtle_1/center_control', self.center_control_cb, 10)
-        self.contorl_pub = self.create_publisher(Twist, '/turtle_1/cmd_vel', 10)
-        self.control_mode_pub = self.create_publisher(Int32, '/turtle_1/control_mode', 10)
+        self.local_sub = self.create_subscription(Odometry, '/turtle_4/real_local', self.real_local_cb, 10)
+        self.path_sub = self.create_subscription(Int32MultiArray, '/turtle_4/path', self.path_cb, 10)
+        self.goal_sub = self.create_subscription(Int32MultiArray, '/turtle_4/target_goal', self.target_goal_cb, 10)
+        self.center_control_sub = self.create_subscription(Int32, '/turtle_4/center_control', self.center_control_cb, 10)
+        self.contorl_pub = self.create_publisher(Twist, '/turtle_4/cmd_vel', 10)
+        self.control_mode_pub = self.create_publisher(Int32, '/turtle_4/control_mode', 10)
 
 
         self.x = None

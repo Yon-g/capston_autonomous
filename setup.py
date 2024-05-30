@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'turtle_1_control = scripts.Turtle_1_Control:main',
-            'center_node = scripts.center_node:main',
+            'center_node = scripts.Center_Node:main',
             'map_plot = scripts.Map_Plot:main',
         ],
     },

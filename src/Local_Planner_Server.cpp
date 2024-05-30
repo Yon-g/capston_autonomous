@@ -39,7 +39,7 @@ class MapServer : public rclcpp::Node
       if(read_map_data(map , HEIGHT, WIDTH)){std::cout << "map 가져옴" << std::endl;}
       else{std::cout << "map 못가져옴" << std::endl;}
 
-      timer_ = this->create_wall_timer(200ms, std::bind(&MapServer::planning, this));
+      timer_ = this->create_wall_timer(100ms, std::bind(&MapServer::planning, this));
       
       //맵 끌고 오기
     }

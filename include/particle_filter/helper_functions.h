@@ -51,7 +51,7 @@ inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x,
  */
 inline bool read_map_data(Map& map , int height, int width) { //2차원 배열을 인덱스값으로 x,y를 지정하고 순서대로 id부여하기
 	std::string package_path = ament_index_cpp::get_package_share_directory("capstone");
-	std::string file_path = package_path + "/map/map2.txt";
+	std::string file_path = package_path + "/map/final_map2.txt";
 	std::cout << file_path << std::endl;
 	// Get file of map:
 	std::ifstream file(file_path);
@@ -84,5 +84,51 @@ inline bool read_map_data(Map& map , int height, int width) { //2차원 배열�
     }
 	return true;
 }
+
+inline bool read_map_data_planning(Map& map , int height, int width) { //2차원 배열을 인덱스값으로 x,y를 지정하고 순서대로 id부여하기
+	std::string package_path = ament_index_cpp::get_package_share_directory("capstone");
+	std::string file_path = package_path + "/map/final_map2_table.txt";
+	std::cout << file_path << std::endl;
+	// Get file of map:
+	std::ifstream file(file_path);
+	// Return if we can't open the file.
+	if (!file.is_open()) {
+		return false;
+	}
+	
+	// Declare single line of map file:
+	std::string line_map;
+	int count = 0;
+	for (int i = 0; i < height; ++i) {
+        std::string line;
+        std::getline(file, line);
+        if (line.length() != width) {
+            std::cout << "잘못된 줄 길이: " << i << std::endl;
+            return 1;
+        }
+        for (int j = 0; j < width; ++j) {
+            if (line[j] == '1') {
+				Map::single_landmark_s single_landmark_temp;
+
+				// Set values
+				single_landmark_temp.id_i = 1;
+				single_landmark_temp.x_f  = i;
+				single_landmark_temp.y_f  = j;
+				map.landmark_list.push_back(single_landmark_temp);
+            }
+			if (line[j] == '2') {
+				Map::single_landmark_s single_landmark_temp;
+				
+				// Set values
+				single_landmark_temp.id_i = 2;
+				single_landmark_temp.x_f  = i;
+				single_landmark_temp.y_f  = j;
+				map.landmark_list.push_back(single_landmark_temp);
+            }
+        }
+    }
+	return true;
+}
+
 
 #endif /* HELPER_FUNCTIONS_H_ */

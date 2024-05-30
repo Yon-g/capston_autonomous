@@ -35,13 +35,22 @@ ament_target_dependencies(local_3 rclcpp std_msgs geometry_msgs sensor_msgs nav_
 add_executable(local_4 src/Turtle_4_Localization.cpp include/particle_filter/particle_filter.cpp)
 ament_target_dependencies(local_4 rclcpp std_msgs geometry_msgs sensor_msgs nav_msgs)
 
-add_executable(planning_1 src/Turtle_1_Planning.cpp include/particle_filter/particle_filter.cpp include/astar/AStar.cpp)
+add_executable(planning_1 src/Turtle_1_Planning.cpp include/dstar/Dstar.cpp)
 ament_target_dependencies(planning_1 rclcpp std_msgs nav_msgs)
 
+add_executable(planning_2 src/Turtle_2_Planning.cpp include/dstar/Dstar.cpp)
+ament_target_dependencies(planning_2 rclcpp std_msgs nav_msgs)
 
-# add_executable(astar src/astar_example.cpp include/astar/AStar.cpp)
-# ament_target_dependencies(astar)
+add_executable(planning_3 src/Turtle_3_Planning.cpp include/dstar/Dstar.cpp)
+ament_target_dependencies(planning_3 rclcpp std_msgs nav_msgs)
 
+add_executable(planning_4 src/Turtle_4_Planning.cpp include/dstar/Dstar.cpp)
+ament_target_dependencies(planning_4 rclcpp std_msgs nav_msgs)
+
+install(DIRECTORY 
+  launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
 
 install(TARGETS
   local_1
@@ -50,6 +59,9 @@ install(TARGETS
   local_4
   map_server
   planning_1
+  planning_2
+  planning_3
+  planning_4
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -57,8 +69,15 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
   scripts/Turtle_1_Control.py
-  scripts/center_node.py
-  scripts/Map_Plot.py
+  scripts/Turtle_2_Control.py
+  scripts/Turtle_3_Control.py
+  scripts/Turtle_4_Control.py
+  scripts/Center_Node.py
+  scripts/Map_1_Plot.py
+  scripts/Map_2_Plot.py
+  scripts/Map_3_Plot.py
+  scripts/Map_4_Plot.py
+  scripts/Total_Plot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

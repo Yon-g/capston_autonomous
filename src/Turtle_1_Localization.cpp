@@ -31,7 +31,8 @@ class Localization : public rclcpp::Node
       cmd_vel_sub = this->create_subscription<geometry_msgs::msg::Twist>("/turtle_1/cmd_vel", 1, std::bind(&Localization::cmd_vel_cb, this, _1));
       local_sub = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_1/dm_local", 1, std::bind(&Localization::local_cb, this, _1));
       lidar_sensor_sub = this->create_subscription<sensor_msgs::msg::LaserScan>("/turtle_1/scan", qos, std::bind(&Localization::lidar_sensor_cb, this, _1));
-      map_sub = this->create_subscription<std_msgs::msg::Float32MultiArray>("/tortal_map", qos, std::bind(&Localization::map_cb, this, _1));
+      dwm1000_sub = this->create_subscription<nav_msgs::msg::Odometry>("/turtle_1/dwm1000", qos, std::bind(&Localization::dwm1000_cb, this, _1));
+      // map_sub = this->create_subscription<std_msgs::msg::Float32MultiArray>("/tortal_map", qos, std::bind(&Localization::map_cb, this, _1));
       local_pub = this->create_publisher<nav_msgs::msg::Odometry>("/turtle_1/real_local", 10);
       obstacle_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/turtle_1/obstacles", 10);
 
@@ -40,7 +41,7 @@ class Localization : public rclcpp::Node
       else{std::cout << "map 못가져옴" << std::endl;}
 
       timer_ = this->create_wall_timer(50ms, std::bind(&Localization::particle_filtering, this));
-      timer2_ = this->create_wall_timer(50ms, std::bind(&Localization::obstacle_compute, this));
+      timer2_ = this->create_wall_timer(100ms, std::bind(&Localization::obstacle_compute, this));
     }
 
     void wait_local(){
@@ -52,30 +53,38 @@ class Localization : public rclcpp::Node
     void obstacle_compute()
     {
       auto obstacles = std_msgs::msg::Int32MultiArray();
-      for(int j=0; j<lidar_observation.size(); ++j){
-        LandmarkObs current_obs = lidar_observation[j];
-        if(sqrt(pow(current_obs.x,2)+pow(current_obs.y,2)) < 24){
+      for(int j=0; j<lidar_obstacle.size(); ++j){
+        LandmarkObs current_obs = lidar_obstacle[j];
+        // if(sqrt(pow(current_obs.x,2)+pow(current_obs.y,2)) < 24){
           obstacles.data.push_back(static_cast<int>((current_obs.x * cos(turtle_real_heading)) - (current_obs.y * sin(turtle_real_heading)) + turtle_real_x));
           obstacles.data.push_back(static_cast<int>((current_obs.x * sin(turtle_real_heading)) + (current_obs.y * cos(turtle_real_heading)) + turtle_real_y));
-        }   
+        // }   
       }
       obstacle_pub->publish(obstacles);
     }
     void particle_filtering()
     {
-      // Initialize particle filter if this is the first time step.
-      if (!pf.initialized()) {
+      if(dwm1000_x != 0 && sqrt(pow(dwm1000_x-turtle_real_x,2)+pow(dwm1000_y-turtle_real_y,2)) > 40){
         n_x = N_x_init(gen);
         n_y = N_y_init(gen);
         n_theta = N_theta_init(gen);
-        pf.init(turtle_real_x + n_x, turtle_real_y + n_y, turtle_real_heading + n_theta, sigma_pos); //particle 생성
+        pf.init(dwm1000_x + n_x, dwm1000_y + n_y, turtle_real_heading + n_theta, sigma_pos);
       }
-      else {
-        // Predict the vehicle's next state (noiseless).
-        pf.prediction(delta_t, sigma_pos, linear_x, angular_z); //velocity,yawrate로 이동 위치 추정
+      else{
+        // Initialize particle filter if this is the first time step.
+        if (!pf.initialized()) {
+          n_x = N_x_init(gen);
+          n_y = N_y_init(gen);
+          n_theta = N_theta_init(gen);
+          pf.init(turtle_real_x + n_x, turtle_real_y + n_y, turtle_real_heading + n_theta, sigma_pos); //particle 생성
+        }
+        else {
+          // Predict the vehicle's next state (noiseless).
+          pf.prediction(delta_t, sigma_pos, linear_x, angular_z); //velocity,yawrate로 이동 위치 추정
+        }
       }
       // simulate the addition of noise to noiseless observation data.
-
+      
       // Update the weights and resample
       pf.updateWeights(sensor_range, sigma_landmark, lidar_observation, map); //particle 가중치 업데이트
       pf.resample(); //particle 재생성
@@ -99,7 +108,7 @@ class Localization : public rclcpp::Node
     bool check_range_in_turtlebot(double theta, float range){ // 의자 다리 인식 안하게
       float x = range*cos(theta);
       float y = range*sin(theta);
-      if(x<0.12 && x >-0.12 && y<0.12 && y >-0.12){
+      if(x<0.15 && x >-0.15 && y<0.15 && y >-0.15){
         return false;
       }
       else{
@@ -116,9 +125,10 @@ class Localization : public rclcpp::Node
     void lidar_sensor_cb(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
       lidar_observation.clear();
+      lidar_obstacle.clear();
       for(int i = 0; i <360; i++){
         double theta = i*PI/180;
-        if(msg->ranges[i] >3){
+        if(msg->ranges[i] >3 || msg->ranges[i] == 0){
           continue;
         }
         if(check_range_in_turtlebot(theta,(float)msg->ranges[i])){
@@ -126,7 +136,13 @@ class Localization : public rclcpp::Node
           ob.x = (int)(msg->ranges[i]*100/3*cos(i*PI/180));
           ob.y = (int)(msg->ranges[i]*100/3*sin(i*PI/180));
           ob.id = i;
-          lidar_observation.push_back(ob);
+          int x = ((ob.x * cos(turtle_real_heading)) - (ob.y * sin(turtle_real_heading)) + turtle_real_x);
+          int y = ((ob.x * sin(turtle_real_heading)) + (ob.y * cos(turtle_real_heading)) + turtle_real_y);
+          if(x >=9 && x <=91 && y >= 14 && y <=85){
+            lidar_obstacle.push_back(ob);
+          }else{
+            lidar_observation.push_back(ob);
+          }
         }
       }
     }
@@ -137,22 +153,31 @@ class Localization : public rclcpp::Node
         turtle_real_y = (int)(msg->pose.pose.position.y * 100/3);
       }
     }
-    void map_cb(const std_msgs::msg::Float32MultiArray::SharedPtr msg){
-      map.landmark_list.clear();
-      for(int i = 0; i< msg->data.size()/3; i++){
-        if(msg->data[3*i+2] > 20.0){
-          Map::single_landmark_s map_particle;
-          map_particle.x_f = msg->data[3*i];
-          map_particle.y_f = msg->data[3*i+1];
-          map.landmark_list.push_back(map_particle);
-        }
-      }
+
+    void dwm1000_cb(const nav_msgs::msg::Odometry::SharedPtr msg){
+      std::cout << "dwm1000_x "<<dwm1000_x << std::endl;
+      std::cout << "dwm1000_y "<<dwm1000_y << std::endl;
+
+      dwm1000_x = (int)(msg->pose.pose.position.x * 100/3);
+      dwm1000_y = (int)(msg->pose.pose.position.y * 100/3);
     }
+    // void map_cb(const std_msgs::msg::Float32MultiArray::SharedPtr msg){
+    //   map.landmark_list.clear();
+    //   for(int i = 0; i< msg->data.size()/3; i++){
+    //     if(msg->data[3*i+2] > 10){
+    //       Map::single_landmark_s map_particle;
+    //       map_particle.x_f = msg->data[3*i];
+    //       map_particle.y_f = msg->data[3*i+1];
+    //       map.landmark_list.push_back(map_particle);
+    //     }
+    //   }
+    // }
 
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sensor_sub;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr local_sub;
-    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr map_sub;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr dwm1000_sub;
+    // rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr map_sub;
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr local_pub;
     rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr obstacle_pub;
@@ -163,6 +188,9 @@ class Localization : public rclcpp::Node
     ParticleFilter pf;
 
     bool local_sub_bool = false;
+
+    int dwm1000_x = 0;
+    int dwm1000_y = 0;
     
     int turtle_real_x = 20;
     int turtle_real_y = 30;
@@ -186,8 +214,10 @@ class Localization : public rclcpp::Node
     double n_x, n_y, n_theta, n_range, n_heading;
     // Read map data
     Map map;
+
     
     std::vector<LandmarkObs> lidar_observation;
+    std::vector<LandmarkObs> lidar_obstacle;
 };
 
 int main(int argc, char * argv[])

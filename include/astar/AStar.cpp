@@ -1,6 +1,8 @@
 #include "astar/AStar.hpp"
 #include <algorithm>
 #include <math.h>
+#include <chrono>
+#include <iostream>
 
 using namespace std::placeholders;
 
@@ -90,7 +92,8 @@ AStar::CoordinateList AStar::Generator::findPath(Vec2i source_, Vec2i target_)
 
         closedSet.push_back(current);
         openSet.erase(current_it);
-
+        auto start3 = std::chrono::high_resolution_clock::now(); // 시작 시간 기록
+        
         for (uint i = 0; i < directions; ++i) {
             Vec2i newCoordinates(current->coordinates + direction[i]);
             if (detectCollision(newCoordinates) ||
@@ -112,6 +115,12 @@ AStar::CoordinateList AStar::Generator::findPath(Vec2i source_, Vec2i target_)
                 successor->G = totalCost;
             }
         }
+
+        auto start4 = std::chrono::high_resolution_clock::now(); // 시작 시간 기록
+        std::chrono::duration<double> elapsed2 = start4 - start3; // 경과 시간 계산
+
+        std::cout << "collision time3: " << elapsed2.count() << " seconds" << std::endl; // 경과 시간 출력
+
     }
 
     CoordinateList path;
